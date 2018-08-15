@@ -7,7 +7,9 @@ import logging
 
 username = os.environ.get('KAGGLE_USERNAME')
 password = os.environ.get('KAGGLE_PASSWORD')
-payload = { 'action' : 'LOGIN',
+payload = { 
+          '__RequestVerificationToken': '',
+          'action' : 'LOGIN',
           'username' : username,
           'password' : password}
 
@@ -20,7 +22,16 @@ def extract_data(url , file_path):
     curr_path = os.path.abspath(file_path)
     print(curr_path)
     with session() as c:
-        c.post('https://www.kaggle.com/account/login', data=payload)
+        
+        loginURL = 'https://www.kaggle.com/account/login'
+        response = c.get(loginURL).text
+        AFToken = response[response.index('antiForgeryToken')+19:response.index('isAnonymous: ')-12]
+        print("AntiForgeryToken={}".format(AFToken))
+        payload['__RequestVerificationToken']=AFToken
+        c.post(loginURL + "?isModal=true&returnUrl=/", data=payload)
+        
+        
+        #c.post('https://www.kaggle.com/account/login', data=payload)
         with open(file_path , 'wb') as handlefile:
             response = c.get(url , stream = True)
             for block in response.iter_content(1024):
